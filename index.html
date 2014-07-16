@@ -1,0 +1,658 @@
+<!doctype html>   
+<html>
+
+<head>
+<title>Pittsburgh Post-Gazette: How does your school stack up?</title>
+
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.0/jquery.min.js"></script>
+<script src="jquery.scrollTo-1.4.3.1-min.js.txt"></script>
+<script src="http://newsinteractive.post-gazette.com/flot/jquery.flot.js"></script>
+
+<link href='http://fonts.googleapis.com/css?family=Karla:700,400' rel='stylesheet' type='text/css'>
+<link href='http://fonts.googleapis.com/css?family=Cabin' rel='stylesheet' type='text/css'>
+<link rel="stylesheet" type="text/css" href="http://newsinteractive.post-gazette.com/bootstrap/css/bootstrap.min.css" />
+
+
+<style type="text/css">
+
+body
+{
+padding:10px;
+}
+
+
+
+h1.super {text-align:center; line-height:68px; font-size:60pt;font-family:"Cabin"}
+
+.withLine
+{
+padding-bottom:10px;
+border-bottom: solid 1px lightgray;
+
+}
+
+.header
+{
+padding-bottom:5px; 
+border-bottom: solid 1px #CCC
+}
+
+#explainer
+{
+text-align:center;
+font-family:georgia;
+font-size:14pt;
+margin:10px 0px;
+}
+
+#infoForm
+{
+margin:30px 0px;
+display:none;
+}
+
+.suggestion
+{
+color:#0088CC;
+cursor:pointer;
+}
+
+.suggestion:hover
+{
+text-decoration:underline;
+}
+
+	#subjectForm #tooFew
+	{
+	margin-top:20px;
+	display:none;
+	}
+
+#results
+{
+border: 1px solid #DDDDDD; 
+border-top:0px;
+border-radius: 4px 4px 4px 4px; 
+//padding:1% 1.5%;
+margin:30px 0px;
+//width:97%;
+display:none;
+padding-bottom:10px;
+}
+	#results .row-fluid
+	{
+	width:97%;
+	margin-left:auto;
+	margin-right:auto;
+	}
+
+.bar
+{
+cursor:pointer;
+}
+
+.bar:hover
+{
+text-decoration:underline;
+}
+
+li a 
+{
+cursor:pointer;
+}
+
+.alert a
+{
+text-transform:uppercase;
+font-size:.8em;
+cursor:pointer;
+}
+
+.moreInfoBox
+{
+display:none;
+font-size:.9em;
+}
+
+#subjectForm
+{
+display:none;
+}
+
+.table thead th
+{
+font-size:9pt; 
+line-height:11pt;
+}
+
+#goWorst, #goBest
+{
+margin-top:-10px;
+}
+
+#aboutDataButton
+{
+cursor:pointer;
+}
+
+#aboutData
+{
+display:none;
+}
+
+#twitter-share-button 
+{
+position:relative;
+left:115px;
+top:2px;
+}
+
+</style>
+
+    <!-- Google Analytics-->
+    <script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-15716261-1']);
+  _gaq.push(['_setDomainName', 'post-gazette.com']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+<!-- end Google Analytics -->
+
+<script type="text/javascript">
+$(document).ready(function(){
+	
+	$("#go").click(function(){
+		$("body").css("min-height", "2000px");
+		$("#infoForm").fadeIn(400, function(){
+		$.scrollTo("#infoForm", 500, {offset:-10});
+		});
+	});
+	
+	$("#infoFormGo").click(function(){
+		$("#results").fadeOut("fast");
+		$("#subjectForm").fadeIn(400, function(){
+		$.scrollTo("#subjectForm", 500, {offset:-10});
+		});
+	});
+		
+	$(".subjectFormGo").click(function(){
+	
+		getInfo($(this).attr("subject"));
+		
+		
+			
+		
+	});
+		
+	//automatic "fill in the school suggestion" function
+	
+		$("#districtInput").keypress(function(){
+			
+			$.get("process.php", {operation:"getDistrictSuggestion", district: $("#districtInput").val()}, function(data)
+			{
+				if(data != "") $("#districtInputHelp").html(data);
+				
+			});
+		});
+		
+		
+		$("#schoolInput").keypress(function(){
+			
+			$.get("process.php", {operation:"getSchoolSuggestion", district: $("#districtInput").val(), school: $("#schoolInput").val(), grade:$("#grade").val()}, function(data)
+			{
+				if(data != "") $("#schoolInputHelp").html(data);
+				
+			});
+		});
+		
+	
+	//click one of the autosuggestions
+	$("body").delegate(".suggestion", "click", function(){
+		$(this).parent().parent().children("input").val($(this).html());
+		
+		$("#schoolInputHelp").load( "process.php", {operation:"getAllSchools", district: $("#districtInput").val(), school: $("#schoolInput").val(), grade:$("#grade").val()} );
+	});
+	
+	//clear suggestions if you lose focus
+		$("#districtInput").focusout(function(){
+			handle=this;
+			setTimeout(function(){$(handle).parent().children("#districtInputHelp").html("");}, 500);
+		});
+		
+			$("#schoolInput").focusout(function(){
+			handle=this;
+			setTimeout(function(){$(handle).parent().children("#schoolInputHelp").html("");}, 500);
+		});
+	
+	//display score if hover over bar graph
+		/*$("#fullBarChart .bar").hover(function(){
+			$("#percentage h1").html($(this).attr("score")+"%");
+			$("#percentage h4").html("Scored " + $(this).attr("level"));
+			
+		});*/
+	
+	//unveil more info on click
+		$(".moreInfo").click(function(){
+			$(this).parent().children(".moreInfoBox").fadeIn("fast");
+			$(this).fadeOut("fast");
+		
+		});
+		
+	//show more top schools on click
+		$("#goBest").click(function(){
+			$.get("process.php", {operation:"getBestSchools", subject:$(".navbar-inner li.active a").html(), group: $("#group").val(), grade:$("#grade").val(), offset: $(this).attr("offset")}, function(data){
+				$("#goBest").attr("offset", parseInt($("#goBest").attr("offset"))+3);
+				$("#best").append(data);
+				
+			});
+		});
+		
+	//show more bottom schools on click
+		$("#goWorst").click(function(){
+			$.get("process.php", {operation:"getWorstSchools", subject:$(".navbar-inner li.active a").html(), group: $("#group").val(), grade:$("#grade").val(), offset: $(this).attr("offset")}, function(data){
+				$("#goWorst").attr("offset", parseInt($("#goWorst").attr("offset"))+3);
+				$("#worst").append(data);
+				
+			});
+		});
+	
+	// show "about the data" on click
+	$("#aboutDataButton").click(function(){
+		$("#aboutData").fadeIn("slow");
+	});
+	
+});
+
+function getInfo(subject)
+{
+
+	//insert group name into all necessary labels
+	$(".groupName").html(convertGroup($("#group").val()));
+	
+	//insert group name into all necessary labels
+	$(".gradeName").html($("#grade").val());
+
+	//insert subject name into all necessary labels
+	$(".subjectName").html(subject.toLowerCase());
+	
+	
+	$.get("process.php", {operation:"getScores", district: $("#districtInput").val(), school: $("#schoolInput").val(), subject:subject, group: $("#group").val(), grade:$("#grade").val()}, function(data){
+		eval(data);
+		if(noResults != 1)
+		{
+			$("#subjectForm").fadeOut("fast");
+			
+			$("#results").fadeIn("fast");
+			
+			//take out numbers from bars if there's not enough room.
+			$("#fullBarChart .bar").each(function(){
+				if(parseInt($(this).attr("score")) <=8)
+				{
+					$(this).children("span").css("display", "none");
+					$(this).children("h1").css("font-size", "10px");
+					$(this).children("h1").css("line-height", "80px");
+				}
+				else
+				{
+					$(this).children("span").css("display", "block");
+					$(this).children("h1").css("font-size", "36px");
+					$(this).children("h1").css("line-height", "40px");
+				}
+			
+			});
+			
+			
+			
+			$.get("process.php", {operation:"getInSchoolRanks", district: $("#districtInput").val(), school: $("#schoolInput").val(), subject:subject, group: $("#group").val(), grade:$("#grade").val()}, function(data){
+		
+				$("#inSchoolRanking").html(data);
+			});
+		
+			$.get("process.php", {operation:"getInDistrictRanks", district: $("#districtInput").val(), school: $("#schoolInput").val(), subject:subject, group: $("#group").val(), grade:$("#grade").val()}, function(data){
+			
+				$("#inDistrictRanking").html(data);
+			});
+		
+			$.get("process.php", {operation:"getYearOverYear", district: $("#districtInput").val(), school: $("#schoolInput").val(), subject:subject, group: $("#group").val(), grade:$("#grade").val()}, function(data){
+				eval(data);
+			});
+			
+			$.get("process.php", {operation:"getStateRanks", district: $("#districtInput").val(), school: $("#schoolInput").val(), subject:subject, group: $("#group").val(), grade:$("#grade").val()}, function(data){
+				eval(data);
+			});
+			
+			$("#best").load("process.php", {operation:"getBestSchools", subject:subject, group: $("#group").val(), grade:$("#grade").val(), offset:0});
+			
+			$("#worst").load("process.php", {operation:"getWorstSchools", subject:subject, group: $("#group").val(), grade:$("#grade").val(), offset:0});
+			
+			$("#comparison").load("process.php", {operation:"getSimilarSchools", district: $("#districtInput").val(), school: $("#schoolInput").val(), subject:subject, group: $("#group").val(), grade:$("#grade").val()});
+			
+			$("#addresses").load("process.php", {operation:"getContactInfo", district: $("#districtInput").val(), school: $("#schoolInput").val(), subject:subject, group: $("#group").val(), grade:$("#grade").val()});
+			
+			$("#results").fadeIn(400, function(){
+				$.scrollTo("#results", 500, {offset:-10});
+			});
+			
+		}
+		
+		
+	
+	});
+
+}
+
+function convertGroup(group)
+{
+	switch(group)
+	{
+		case "All Students": return "all"; break;
+		case "Male": return "male"; break;
+		case "Female": return "female"; break;
+		case "White": return "white"; break;
+		case "Black": return "black"; break;
+		case "Hispanic": return "Hispanic"; break;
+		case "Asian": return "Asian"; break;
+		case "Native American": return "Native American"; break;
+		case "Multi-ethnic": return "multi-ethnic"; break;
+		case "IEP": return "special needs"; break;
+		case "Economically disadvantaged": return "economically disadvantaged"; break;
+		case "ELL": return "English language learner"; break;
+	}
+}
+
+
+</script>
+
+</head>
+
+<body>
+
+<!--FACEBOOK CODE-->
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) return;
+  js = d.createElement(s); js.id = id;
+  js.src = "//connect.facebook.net/en_US/all.js#xfbml=1&appId=446204175412475";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+<!--END FACEBOOK CODE-->
+
+
+ 
+<div class="container">
+	<div class="row">
+		<div class="span6 offset3">
+			<img src="GreenApple.jpg" style="margin:auto; position:relative; left:100px;"/>
+			<h1 class="super">How is your school doing?</h1>
+			<div style="font-size:9pt; text-transform:uppercase; color:gray; text-align:center; margin-top:30px">By <a href="mailto:amcgill@post-gazette.com" style="color:Gray; text-decoration:underline;">Andrew McGill</a><br />412-263-1497</div>
+			<div id="explainer">From elementary school through to high school, public school students take the Pennsylvania System of School Assessment exams in reading and math. <br /><br />Black or white, special education or English-language learner -- how well is your school teaching your child's demographic? And how do other districts compare?<br /><br />Take a look at the 2012 scores and decide for yourself.</div>
+			<button class="btn btn-large btn-block" type="button" id="go">Let's begin</button>
+			<div style="text-align:center; margin:10px 0px; font-size:90%;"> <a id = "aboutDataButton">About the data</a></div>
+			<div class="well" id="aboutData">
+				<p>This tool uses Pennsylvania Department of Education data from the 2012 Math and Reading PSSA tests. It includes <a href="http://www.portal.state.pa.us/portal/http;//www.portal.state.pa.us/portal/server.pt/gateway/PTARGS_0_123063_1285455_0_0_18/2012%20PSSA%20Math%20Reading%20School%20by%20subgroups%20and%20grade%20level.xlsx">results from all public schools</a>, including charter schools, but not private and parochial schools, which are not required to take the PSSA.</p><p>This raw data may differ from the adjusted data in the reports for adequate yearly progress, known as AYP. The raw PSSA data count demographic subgroups of 10 or more, while AYP data reflect only groups of 40 or more.</p>
+				
+			</div>
+			<!--facebook button -->
+			<div class="fb-like" style="margin:10px auto; text-align:center; position:relative; left:100px; top:0px;" data-href="http://newsinteractive.post-gazette.com/PSSA/2012/index.html" data-send="true" data-layout="button_count" data-width="450" data-show-faces="false" data-action="recommend"></div>
+			<!--end facebook -->
+			<!--twitter code-->
+			<div style="position:relative; left:115px; display:inline; top:2px;">
+				<a href="https://twitter.com/share" class="twitter-share-button" data-url="http://newsinteractive.post-gazette.com/PSSA/2012/" data-text="See how your school stacks up to the rest of the state:" data-via="PittsburghPG">Tweet</a>
+				<script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
+			</div>
+			<!--end twitter code-->
+		</div>
+	</div>
+		
+	<div class="well" id="infoForm">
+		<h1 style="text-align:center">Tell us what you're looking for</h1>
+		<div style="text-align:center; font-size:.9em; margin:5px 0px 10px 0px;"><a onclick="$('#searchHelp').fadeIn(); $(this).fadeOut();" style="cursor:pointer;">Need help?</a><span style = "display:none;" id="searchHelp">Names must be entered exactly as they appear in the "Suggestions" prompt. <br />For charter schools, enter the school name into both the "District" and "School" fields.</span></div>
+		<div class="row-fluid">
+			<div class="span2">
+				<form>
+					<label>Grade</label>
+					<select class="input-medium" id="grade" style="width:145px">
+						<option>3</option>
+						<option>4</option>
+						<option>5</option>
+						<option>6</option>
+						<option>7</option>
+						<option>8</option>
+						<option>11</option>
+					</select>
+				</form>
+			</div>
+			
+			<div class="span3">
+				<form>
+					<label>Demographic</label>
+					<select id="group">
+						<option>All Students</option>
+						<option>Male</option>
+						<option>Female</option>
+						<option>White</option>
+						<option>Black</option>
+						<option>Hispanic</option>
+						<option>Asian</option>
+						<option>Native American</option>
+						<option>Multi-ethnic</option>
+						<option value="IEP">Special needs</option>
+						<option>Economically disadvantaged</option>
+						<option value="ELL">English as second language</option>
+					</select>
+				</form>
+			</div>
+			
+			<div class="span3">
+				<form>
+					<label>District</label>
+					<input type="text" placeholder="" id="districtInput">
+					<span class="help-block" id="districtInputHelp"></span>
+				</form>
+			</div>
+			
+			<div class="span3">
+				<form>
+					<label>School</label>
+					<input type="text" placeholder="" id="schoolInput">
+					<span class="help-block" id="schoolInputHelp"></span>
+				</form>
+			
+			</div>
+			
+			<div class="span1">
+				<form>
+				<label>&nbsp;</label>
+				<button class="btn btn-primary" type="button" id="infoFormGo">Go</button>
+				</form>
+			</div>
+			
+		</div>
+				
+		
+	</div><!--end information form -->
+	
+	<!--START SUBJECT FORM-->
+	<div class="well" id="subjectForm">
+		<h1 style="margin-bottom:20px; text-align:center">Which subject are you interested in?</h1>
+		
+		<div class="row-fluid">
+			<div class="span3 offset3">
+				<button class="btn btn-large subjectFormGo" style="width:100%" type="button"  subject="Reading">Reading</button>
+			</div>
+			
+			<div class="span3">
+				<button class="btn btn-large subjectFormGo" style="width:100%" type="button" subject="Math">Math</button>
+			</div>
+		</div>
+		
+		<div class="row-fluid" id="tooFew">
+			<div class="span12 alert alert-error">
+				<strong>Sorry:</strong> No data could be found.
+			</div>
+		</div>
+	</div>
+	<!--END SUBJECT FORM-->
+	
+	<div id="results">
+		<div class="row-fluid" style="width:100%;">
+			<div class="navbar">
+				<div class="navbar-inner">
+					<a class="brand">2012 results</a>
+					<ul class="nav">
+						<li class="active" id="readingToggle"><a onclick="getInfo('Reading'); $('.nav li').removeClass('active'); $('#readingToggle').addClass('active');">Reading</a></li>
+						<li id="mathToggle"><a onclick="getInfo('Math'); $('.nav li').removeClass('active'); $('#mathToggle').addClass('active');">Math</a></li>
+					</ul>
+				</div>
+			</div>
+		</div>
+	
+		
+		
+		<!--<div class="row-fluid">
+			<div class="span12" style="text-align:center; color:gray; text-transform:uppercase;">
+			<h5>Black 3rd Graders in Cheltenham Elementary school</h5>
+			</div>
+		</div>-->
+		
+		<div class="row-fluid">
+			<div class="span12">
+				<h3 class="header">Your school: Raw <span class="subjectName"></span> scores for <span class="groupName"></span> students in grade <span class="gradeName"></span> (<span id="totalNumber"></span> total)</h3>
+			</div>
+		</div>
+		
+		<!--BAR CHART TIME -->
+		<div class="row-fluid" id="fullBarChart">
+			<!--<div class="span2" id="barReadout" style="text-align:center; padding-top:20px;">
+					
+			</div>-->
+			
+			<div class="span2" style="text-align:center; padding-top:20px;" id="percentage">
+				<h1 style="font-size:45pt;" >36%</h1><h4 style="position:relative; top:10px">Scored "Advanced"</h4>
+			</div>
+			
+			<div class="span10">
+				<div class="progress" style="height:150px;">
+					<div class="bar bar-success" style="width:60%;" id="advancedBar" level="Advanced"><span>Advanced</span><h1 class="percentageNumber"></h1></div>
+					<div class="bar bar-info" style="width:10%;" id="proficientBar" level="Proficient"><span>Proficient</span><h1 class="percentageNumber"></h1></div>
+					<div class="bar bar-warning" style="width:10%;" id="basicBar" level="Basic"><span>Basic</span><h1 class="percentageNumber"></h1></div>
+					<div class="bar bar-danger" style="width:20%;" id="belowBasicBar" level="Below Basic"><span>Below Basic</span><h1 class="percentageNumber"></h1></div>
+				</div>
+			</div>
+			
+			
+		</div>
+		
+		<!--comparison chart for avg student-->
+		<div class="row-fluid" id="first">
+			<div class="span2" style="text-align:right; font-size:9pt;">
+			School average &nbsp;<i class="icon-arrow-right"></i>
+			</div>
+			
+			<div class="span10">
+				<div class="progress" style="height:20px;">
+					<div class="bar bar-success" style="width:60%;" id="advancedBenchmark"></div>
+					<div class="bar bar-info" style="width:10%;" id="proficientBenchmark"></div>
+					<div class="bar bar-warning" style="width:10%;" id="basicBenchmark"></div>
+					<div class="bar bar-danger" style="width:20%;" id="belowBasicBenchmark"></div>
+				</div>
+			</div>
+				
+			
+		</div>
+		
+		
+		<div class="row-fluid" id="second">
+			<div class="span12">
+				<h3 id="demographicDistrictHeader" class="header">This demographic within your district</h3>
+			</div>
+		</div>
+		
+			<div class="row-fluid">
+				<div class="span4"> 
+				<h4 class='withLine'>In your school</h4>
+				    <div class="alert">
+						<strong>What this shows:</strong> How well this demographic scored compared to other groups in the school.<br /><a class="moreInfo">More info</a><span class="moreInfoBox"><br />There are overlaps in this data. The "male" subset includes students also included in the "white" subset, the "black" subset, etc. The state does not break down these intersections of data.</span>
+					</div>
+					<div id="inSchoolRanking"></div>
+					
+				</div>
+				<div class="span4"> 
+					<h4 class="withLine">In your district</h4>
+					<div class="alert">
+						<strong>What this shows:</strong> How schools in your district compare on the same demographic.
+					</div>
+					<div id="inDistrictRanking"></div>
+				</div>
+				<div class="span4">
+					<h4 class="withLine">Grade-by-grade performance</h4>
+					<div class="alert">
+						<strong>What this shows:</strong> How this demographic performed throughout all grades in 2012.<br /><a class="moreInfo">More info</a><span class="moreInfoBox"><br />This offers a snapshot of how older and younger children of the selected demographic perfomed this year. This is not a value-added analysis. "Average" refers to an average student in the district at that grade.</span>
+					</div>
+					<div id="timeChart" style="width:100%; height:325px;"></div>
+				</div>
+				
+			</div>
+		
+		<div class="row-fluid" id="third">
+			<div class="span12">
+				<h3 class="header">How <span class="groupName"></span> students in grade <span class="gradeName"></span> scored in other districts</h3>
+			</div>
+		</div>
+		
+		<div class="row-fluid">
+			<div class="span4">
+				<h3 class="header" style="line-height:30px;">Your school's<br />statewide rank</h3>
+				<div style="text-align:center; font-size:12pt; margin-bottom:10px">
+					<h3 style="font-size:35pt; margin:20px auto 10px auto; text-align:center" id="stateRank"></h3>
+					for <strong><span class="groupName"></span></strong> students (<span id="percentile"></span>)
+				</div>
+				<table class='table table-hover' id="peers"><thead><th>Rank</th><th>School (District)</th><th>Proficient or higher</th></thead>
+				
+				</table>
+			</div>
+			<div class="span8">
+				<div class="row-fluid">
+					<div class="span12">
+						<h3 class="header">Similar schools with better scores</h3>
+						<div class="alert">
+								<strong>What this shows:</strong> Other schools of a simliar size with the same proportion of <span id="groupName"></span> students who scored better. This list is limited to schools in your county. <br /><a class="moreInfo">More info</a><span class="moreInfoBox"><br />This algorithm looks for schools who host a similar amount of <span id="groupName"></span> students (within 10 percent), and a similar total class size (within 30 percent). It only lists schools whose children of this demographic scored better.</span>
+						</div>
+						<table class='table table-hover' id="comparison"></table>
+					</div>
+					
+					<div class="row-fluid">
+						<div class='span6'>
+							<h3 class="header">Best schools in state</h3>
+							<table class='table table-hover'><tbody id="best"></tbody></table><button class="btn btn-small btn-block" type="button" id="goBest" offset=3>More</button>
+						
+							<h3 class="header">Worst schools in state</h3>
+							<table class='table table-hover'><tbody id="worst"></tbody></table> <button class="btn btn-small btn-block" type="button" id="goWorst" offset=3>More</button>
+						</div>
+					
+						<div class="span6 well well-small">
+							<h3 class="header">Getting in touch</h3>
+							<div id="addresses"></div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		
+		
+	</div>
+	
+</div>
+	
+</body>
+
+</html>
